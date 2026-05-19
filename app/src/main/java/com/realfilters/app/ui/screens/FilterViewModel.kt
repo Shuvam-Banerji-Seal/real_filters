@@ -10,13 +10,16 @@ import com.realfilters.app.domain.engine.*
 import com.realfilters.app.domain.filter.PresetFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class StableBitmap(val bitmap: Bitmap)
+
 data class FilterUiState(
-    val originalBitmap: Bitmap? = null,
-    val processedBitmap: Bitmap? = null,
+    val originalBitmap: StableBitmap? = null,
+    val processedBitmap: StableBitmap? = null,
     val layers: List<FilterLayer> = emptyList(),
     val selectedLayerIndex: Int = -1,
     val currentColorMatrix: ColorMatrix = PresetFilters.identity,
@@ -35,11 +38,16 @@ data class FilterUiState(
     val showSaveDialog: Boolean = false,
     val showExportDialog: Boolean = false,
     val showImportDialog: Boolean = false,
-    val filterName: String = ""
+    val filterName: String = "",
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 enum class EditMode {
     COLOR_MATRIX, CONVOLUTION
+}
+
+enum class ThemeMode {
+    LIGHT, DARK, SYSTEM
 }
 
 @HiltViewModel
@@ -52,6 +60,8 @@ class FilterViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(FilterUiState())
     val uiState: StateFlow<FilterUiState> = _uiState.asStateFlow()
+
+    private var applyJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -68,10 +78,11 @@ class FilterViewModel @Inject constructor(
                 val format = imageLoader.detectFormat(context, uri)
                 val bitmap = imageLoader.loadImage(context, uri)
                 if (bitmap != null) {
+                    val stable = StableBitmap(bitmap)
                     _uiState.update {
                         it.copy(
-                            originalBitmap = bitmap,
-                            processedBitmap = bitmap,
+                            originalBitmap = stable,
+                            processedBitmap = stable,
                             layers = emptyList(),
                             selectedLayerIndex = -1,
                             imageFormat = format,
@@ -189,13 +200,23 @@ class FilterViewModel @Inject constructor(
 
     fun applyFilters() {
         val state = _uiState.value
-        val original = state.originalBitmap ?: return
+        val original = state.originalBitmap?.bitmap ?: return
 
-        viewModelScope.launch {
+        applyJob?.cancel()
+        applyJob = viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true) }
             try {
-                val result = engine.applyFilterLayers(original, state.layers)
-                _uiState.update { it.copy(processedBitmap = result, isProcessing = false) }
+                val result = if (state.layers.isEmpty()) {
+                    original
+                } else {
+                    engine.applyFilterLayers(original, state.layers)
+                }
+                _uiState.update {
+                    it.copy(
+                        processedBitmap = StableBitmap(result),
+                        isProcessing = false
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isProcessing = false) }
             }
@@ -264,6 +285,10 @@ class FilterViewModel @Inject constructor(
         }
     }
 
+    fun setThemeMode(mode: ThemeMode) {
+        _uiState.update { it.copy(themeMode = mode) }
+    }
+
     fun showMatrixEditor() = _uiState.update { it.copy(showMatrixEditor = true) }
     fun hideMatrixEditor() = _uiState.update { it.copy(showMatrixEditor = false) }
     fun showKernelEditor() = _uiState.update { it.copy(showKernelEditor = true) }
@@ -276,6 +301,4 @@ class FilterViewModel @Inject constructor(
     fun updateFilterName(name: String) = _uiState.update { it.copy(filterName = name) }
     fun updateImportJson(json: String) = _uiState.update { it.copy(importJson = json) }
     fun clearError() = _uiState.update { it.copy(error = null) }
-
-    fun getProcessedBitmap(): Bitmap? = _uiState.value.processedBitmap
 }
