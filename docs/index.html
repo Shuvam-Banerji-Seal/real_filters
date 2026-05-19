@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Filters - Image Processing for Android</title>
+    <meta name="description" content="Real Filters is an Android app that reveals the mathematics behind image filters. Write your own matrices, layer effects, and understand how image processing really works.">
+    <meta name="keywords" content="android, image processing, filters, matrix, convolution, sepia, grayscale, edge detection, kernel, kotlin, jetpack compose">
+    <meta property="og:title" content="Real Filters - Image Processing for Android">
+    <meta property="og:description" content="See how image filters really work. Write your own matrices and kernels.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://shuvam-banerji-seal.github.io/real_filters/">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        :root {
+            --primary: #5B52E0;
+            --primary-light: #6C63FF;
+            --bg: #0F0F23;
+            --bg-card: #1A1A2E;
+            --text: #E8E8F0;
+            --text-muted: #9898B0;
+            --accent: #FF6B6B;
+            --accent2: #4ECDC4;
+            --accent3: #45B7D1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 24px;
+            background: linear-gradient(135deg, var(--bg) 0%, #1a1a3e 100%);
+        }
+
+        .hero-content h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .hero-content p {
+            font-size: clamp(1rem, 2vw, 1.3rem);
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            box-shadow: 0 4px 20px rgba(91, 82, 224, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(91, 82, 224, 0.6);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        /* Features */
+        .features {
+            padding: 100px 24px;
+            background: var(--bg);
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+            color: var(--text);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Matrix Demo */
+        .matrix-demo {
+            padding: 80px 24px;
+            background: linear-gradient(135deg, var(--bg) 0%, #1a1a2e 100%);
+        }
+
+        .matrix-demo h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 40px;
+        }
+
+        .matrix-examples {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .matrix-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .matrix-card h4 {
+            margin-bottom: 16px;
+            color: var(--accent2);
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+        }
+
+        .matrix-cell {
+            background: rgba(91, 82, 224, 0.15);
+            padding: 6px 4px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        .matrix-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Kernels */
+        .kernel-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            max-width: 120px;
+            margin: 0 auto 12px;
+        }
+
+        .kernel-cell {
+            background: rgba(78, 205, 196, 0.2);
+            padding: 8px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        /* Download */
+        .download {
+            padding: 100px 24px;
+            text-align: center;
+            background: var(--bg);
+        }
+
+        .download h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .download p {
+            color: var(--text-muted);
+            max-width: 500px;
+            margin: 0 auto 40px;
+        }
+
+        .tech-badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .badge {
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 24px;
+            text-align: center;
+            background: var(--bg-card);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--primary-light);
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .matrix-examples {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Real Filters</h1>
+            <p>An Android app that reveals the mathematics behind image filters. Every effect is just a matrix.</p>
+            <div class="hero-buttons">
+                <a href="https://github.com/Shuvam-Banerji-Seal/real_filters/releases" class="btn btn-primary">
+                    Download APK
+                </a>
+                <a href="https://github.com/Shuvam-Banerji-Seal/real_filters" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <h2>Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🖼️</div>
+                    <h3>Load Any Image</h3>
+                    <p>Supports JPEG, PNG, GIF, BMP, WebP, TIFF, HEIF, and SVG. Load from gallery or file browser.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔢</div>
+                    <h3>See the Math</h3>
+                    <p>Every filter displays its underlying 4×5 color matrix or NxN convolution kernel in real-time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3>Write Your Own</h3>
+                    <p>Edit matrix values directly. Create custom convolution kernels of any size. Experiment freely.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>Layer System</h3>
+                    <p>Stack multiple filters with adjustable opacity. Reorder, toggle, and compose effects.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✖️</div>
+                    <h3>Matrix Composition</h3>
+                    <p>Multiply matrices together mathematically. See how combining filters creates new effects.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>Export & Share</h3>
+                    <p>Save filters as JSON. Import filters from others. Build a library of custom effects.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="matrix-demo">
+        <div class="container">
+            <h2>How Filters Work</h2>
+            <div class="matrix-examples">
+                <div class="matrix-card">
+                    <h4>Sepia</h4>
+                    <div class="matrix-grid">
+                        <div class="matrix-cell">0.393</div>
+                        <div class="matrix-cell">0.769</div>
+                        <div class="matrix-cell">0.189</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0.349</div>
+                        <div class="matrix-cell">0.686</div>
+                        <div class="matrix-cell">0.168</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0.272</div>
+                        <div class="matrix-cell">0.534</div>
+                        <div class="matrix-cell">0.131</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">0</div>
+                        <div class="matrix-cell">1</div>
+                        <div class="matrix-cell">0</div>
+                    </div>
+                    <div class="matrix-label">Color Matrix (4×5)</div>
+                </div>
+                <div class="matrix-card">
+                    <h4>Sharpen</h4>
+                    <div class="kernel-grid">
+                        <div class="kernel-cell">0</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">0</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">5</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">0</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">0</div>
+                    </div>
+                    <div class="matrix-label">Convolution Kernel (3×3)</div>
+                </div>
+                <div class="matrix-card">
+                    <h4>Edge Detect</h4>
+                    <div class="kernel-grid">
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">8</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                        <div class="kernel-cell">-1</div>
+                    </div>
+                    <div class="matrix-label">Convolution Kernel (3×3)</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download">
+        <div class="container">
+            <h2>Get Real Filters</h2>
+            <p>Available for Android 7.0 (API 24) and above. Free and open source.</p>
+            <a href="https://github.com/Shuvam-Banerji-Seal/real_filters/releases" class="btn btn-primary">
+                Download v1.0.0
+            </a>
+            <div class="tech-badges">
+                <span class="badge">Kotlin 2.0</span>
+                <span class="badge">Jetpack Compose</span>
+                <span class="badge">Material3</span>
+                <span class="badge">MVVM</span>
+                <span class="badge">Hilt</span>
+                <span class="badge">Room</span>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>
+                Real Filters is open source under the MIT License.
+                <a href="https://github.com/Shuvam-Banerji-Seal/real_filters">GitHub</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
