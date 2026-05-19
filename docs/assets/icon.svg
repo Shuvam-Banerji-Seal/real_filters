@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#5B52E0"/>
+  <g transform="translate(106, 106)">
+    <!-- Grid lines -->
+    <rect x="0" y="0" width="300" height="18" rx="4" fill="white" opacity="0.9"/>
+    <rect x="0" y="94" width="300" height="18" rx="4" fill="white" opacity="0.9"/>
+    <rect x="0" y="188" width="300" height="18" rx="4" fill="white" opacity="0.9"/>
+    <rect x="0" y="282" width="300" height="18" rx="4" fill="white" opacity="0.9"/>
+    <rect x="0" y="0" width="18" height="300" rx="4" fill="white" opacity="0.9"/>
+    <rect x="94" y="0" width="18" height="300" rx="4" fill="white" opacity="0.9"/>
+    <rect x="188" y="0" width="18" height="300" rx="4" fill="white" opacity="0.9"/>
+    <rect x="282" y="0" width="18" height="300" rx="4" fill="white" opacity="0.9"/>
+    <!-- Color dots -->
+    <circle cx="56" cy="56" r="28" fill="#FF6B6B"/>
+    <circle cx="150" cy="56" r="28" fill="#4ECDC4"/>
+    <circle cx="244" cy="56" r="28" fill="#45B7D1"/>
+    <circle cx="56" cy="150" r="28" fill="#FFA07A"/>
+    <circle cx="150" cy="150" r="28" fill="#98D8C8"/>
+    <circle cx="244" cy="150" r="28" fill="#F7DC6F"/>
+    <circle cx="56" cy="244" r="28" fill="#BB8FCE"/>
+    <circle cx="150" cy="244" r="28" fill="#82E0AA"/>
+    <circle cx="244" cy="244" r="28" fill="#F1948A"/>
+  </g>
+</svg>
