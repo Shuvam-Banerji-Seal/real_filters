@@ -12,9 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.realfilters.app.ui.screens.FilterViewModel
 import com.realfilters.app.ui.screens.MainNavigation
 import com.realfilters.app.ui.screens.ThemeMode
+import com.realfilters.app.ui.screens.ThemeViewModel
 import com.realfilters.app.ui.theme.RealFiltersTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -24,10 +24,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val viewModel: FilterViewModel = hiltViewModel()
-            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val themeViewModel: ThemeViewModel = hiltViewModel()
+            val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
 
-            val darkTheme = when (uiState.themeMode) {
+            val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    MainNavigation(themeViewModel = themeViewModel)
                 }
             }
         }

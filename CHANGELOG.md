@@ -2,6 +2,18 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.2] - 2026-05-20
+
+### Fixed
+- **Critical: Image Not Loading**: Fixed root cause where HomeScreen and FilterEditorScreen had separate ViewModel instances due to Hilt NavBackStackEntry scoping. Both screens now share a single ViewModel scoped to the "home" navigation destination.
+- **ViewModel Sharing**: Refactored navigation to pass ViewModel instance from NavHost level instead of each screen creating its own via `hiltViewModel()`
+- **Theme Isolation**: Extracted theme state into separate `ThemeViewModel` to avoid circular dependencies
+
+### Architecture
+- `FilterViewModel` now scoped to NavHost's "home" back stack entry, shared by both HomeScreen and FilterEditorScreen
+- `ThemeViewModel` handles theme state independently at Activity level
+- Screens receive ViewModel as parameter instead of creating via `hiltViewModel()`
+
 ## [1.0.1] - 2026-05-20
 
 ### Fixed

@@ -22,13 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToEditor: () -> Unit,
-    viewModel: FilterViewModel = hiltViewModel()
+    viewModel: FilterViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var imageUri by remember { mutableStateOf<Uri?>(null) }

@@ -38,16 +38,11 @@ data class FilterUiState(
     val showSaveDialog: Boolean = false,
     val showExportDialog: Boolean = false,
     val showImportDialog: Boolean = false,
-    val filterName: String = "",
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val filterName: String = ""
 )
 
 enum class EditMode {
     COLOR_MATRIX, CONVOLUTION
-}
-
-enum class ThemeMode {
-    LIGHT, DARK, SYSTEM
 }
 
 @HiltViewModel
@@ -283,10 +278,6 @@ class FilterViewModel @Inject constructor(
         } else {
             _uiState.update { it.copy(error = "Invalid filter format") }
         }
-    }
-
-    fun setThemeMode(mode: ThemeMode) {
-        _uiState.update { it.copy(themeMode = mode) }
     }
 
     fun showMatrixEditor() = _uiState.update { it.copy(showMatrixEditor = true) }

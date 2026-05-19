@@ -27,16 +27,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.realfilters.app.domain.engine.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterEditorScreen(
     onNavigateBack: () -> Unit,
-    viewModel: FilterViewModel = hiltViewModel()
+    viewModel: FilterViewModel,
+    themeViewModel: ThemeViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val themeMode by themeViewModel.themeMode.collectAsState()
     val context = LocalContext.current
     var showPresetSheet by remember { mutableStateOf(false) }
     var showLayerSheet by remember { mutableStateOf(false) }
@@ -311,8 +312,8 @@ fun FilterEditorScreen(
 
     if (showThemeSheet) {
         ThemeSheet(
-            currentMode = uiState.themeMode,
-            onSelect = { viewModel.setThemeMode(it) },
+            currentMode = themeMode,
+            onSelect = { themeViewModel.setThemeMode(it) },
             onDismiss = { showThemeSheet = false }
         )
     }
