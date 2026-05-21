@@ -12,7 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.realfilters.app.ui.screens.MainNavigation
+import com.realfilters.app.ui.screens.MainScreen
 import com.realfilters.app.ui.screens.ThemeMode
 import com.realfilters.app.ui.screens.ThemeViewModel
 import com.realfilters.app.ui.theme.RealFiltersTheme
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation(themeViewModel = themeViewModel)
+                    MainScreen(themeViewModel = themeViewModel)
                 }
             }
         }

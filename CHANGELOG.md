@@ -2,6 +2,23 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.4] - 2026-05-20
+
+### Fixed
+- **Critical: Image preview now works** - Completely rewrote app architecture to use single-screen approach. Eliminates ViewModel sharing issues across navigation by keeping everything in one screen with conditional content (home vs editor).
+- **Architecture**: Replaced NavHost-based navigation with single `MainScreen` composable that conditionally shows home or editor content based on `showEditor` state flag.
+- **Image composable**: Added missing `import androidx.compose.foundation.Image` and `remember(imageBitmap)` for proper bitmap caching.
+- **Icon references**: Fixed `Icons.Default.Image` (not available) → `Icons.Default.PhotoLibrary`.
+
+### Architecture Change
+```
+Before: MainActivity → MainNavigation (NavHost) → HomeScreen + FilterEditorScreen
+        (separate ViewModels per destination - broken)
+
+After:  MainActivity → MainScreen (single screen, conditional content)
+        (one ViewModel, shared state - works)
+```
+
 ## [1.0.3] - 2026-05-20
 
 ### Fixed

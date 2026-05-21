@@ -1,14 +1,21 @@
 package com.realfilters.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.foundation.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -27,22 +35,244 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.realfilters.app.domain.engine.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilterEditorScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: FilterViewModel,
-    themeViewModel: ThemeViewModel
+fun MainScreen(
+    themeViewModel: ThemeViewModel,
+    viewModel: FilterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val themeMode by themeViewModel.themeMode.collectAsState()
-    val context = LocalContext.current
     var showPresetSheet by remember { mutableStateOf(false) }
     var showLayerSheet by remember { mutableStateOf(false) }
     var showThemeSheet by remember { mutableStateOf(false) }
+    var showEditor by remember { mutableStateOf(false) }
 
+    val pickImage = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.loadImage(it)
+            showEditor = true
+        }
+    }
+
+    val pickDocument = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.loadImage(it)
+            showEditor = true
+        }
+    }
+
+    if (showEditor && uiState.originalBitmap != null) {
+        EditorContent(
+            uiState = uiState,
+            viewModel = viewModel,
+            themeMode = themeMode,
+            themeViewModel = themeViewModel,
+            onBack = { showEditor = false },
+            showPresetSheet = showPresetSheet,
+            showLayerSheet = showLayerSheet,
+            showThemeSheet = showThemeSheet,
+            onShowPresetSheet = { showPresetSheet = it },
+            onShowLayerSheet = { showLayerSheet = it },
+            onShowThemeSheet = { showThemeSheet = it }
+        )
+    } else {
+        HomeContent(
+            uiState = uiState,
+            viewModel = viewModel,
+            onPickImage = { pickImage.launch("image/*") },
+            onPickDocument = { pickDocument.launch(arrayOf("image/*")) },
+            onEditSaved = { id ->
+                viewModel.loadSavedFilter(id)
+                showEditor = uiState.originalBitmap != null
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeContent(
+    uiState: FilterUiState,
+    viewModel: FilterViewModel,
+    onPickImage: () -> Unit,
+    onPickDocument: () -> Unit,
+    onEditSaved: (Long) -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Real Filters",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                            )
+                        )
+                    )
+                    .clickable(onClick = onPickImage),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = "Pick Image",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Tap to load an image",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "JPEG, PNG, GIF, BMP, WebP, TIFF, HEIF, SVG",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.PhotoLibrary,
+                    title = "Gallery",
+                    subtitle = "Pick from gallery",
+                    onClick = onPickImage
+                )
+                ActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.FolderOpen,
+                    title = "Browse",
+                    subtitle = "Open any file",
+                    onClick = onPickDocument
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            if (uiState.savedFilters.isNotEmpty()) {
+                Text(
+                    "Saved Filters",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.savedFilters) { filter ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onEditSaved(filter.id) },
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        filter.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        filter.type.replace("_", " ").uppercase(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { viewModel.deleteSavedFilter(filter.id) }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditorContent(
+    uiState: FilterUiState,
+    viewModel: FilterViewModel,
+    themeMode: ThemeMode,
+    themeViewModel: ThemeViewModel,
+    onBack: () -> Unit,
+    showPresetSheet: Boolean,
+    showLayerSheet: Boolean,
+    showThemeSheet: Boolean,
+    onShowPresetSheet: (Boolean) -> Unit,
+    onShowLayerSheet: (Boolean) -> Unit,
+    onShowThemeSheet: (Boolean) -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -59,12 +289,12 @@ fun FilterEditorScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showThemeSheet = true }) {
+                    IconButton(onClick = { onShowThemeSheet(true) }) {
                         Icon(Icons.Default.Palette, "Theme")
                     }
                     IconButton(onClick = { viewModel.showImportDialog() }) {
@@ -96,12 +326,12 @@ fun FilterEditorScreen(
                     BottomAction(
                         icon = Icons.Default.GridOn,
                         label = "Presets",
-                        onClick = { showPresetSheet = true }
+                        onClick = { onShowPresetSheet(true) }
                     )
                     BottomAction(
                         icon = Icons.Default.Layers,
                         label = "Layers",
-                        onClick = { showLayerSheet = true },
+                        onClick = { onShowLayerSheet(true) },
                         badge = uiState.layers.size
                     )
                     BottomAction(
@@ -179,20 +409,19 @@ fun FilterEditorScreen(
 
                 when {
                     displayBitmap != null -> {
-                        // Use key to force recomposition when bitmap changes
-                        key(displayBitmap.generationId) {
-                            Image(
-                                bitmap = displayBitmap.asImageBitmap(),
-                                contentDescription = "Image preview",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(4.dp),
-                                contentScale = ContentScale.Fit
-                            )
+                        val imageBitmap = remember(displayBitmap) {
+                            displayBitmap.asImageBitmap()
                         }
+                        Image(
+                            bitmap = imageBitmap,
+                            contentDescription = "Image preview",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentScale = ContentScale.Fit
+                        )
                     }
                     uiState.isProcessing -> {
-                        // Show loading indicator while image loads
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -279,7 +508,10 @@ fun FilterEditorScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text(
@@ -316,7 +548,7 @@ fun FilterEditorScreen(
             uiState = uiState,
             onSelectMatrix = { viewModel.selectPresetMatrix(it) },
             onSelectKernel = { viewModel.selectPresetKernel(it) },
-            onDismiss = { showPresetSheet = false }
+            onDismiss = { onShowPresetSheet(false) }
         )
     }
 
@@ -329,8 +561,7 @@ fun FilterEditorScreen(
             onRemove = { viewModel.removeLayer(it) },
             onMove = { from, to -> viewModel.moveLayer(from, to) },
             onOpacityChange = { index, opacity -> viewModel.updateLayerOpacity(index, opacity) },
-            onMultiply = { viewModel.multiplySelectedWithPreset(it) },
-            onDismiss = { showLayerSheet = false }
+            onDismiss = { onShowLayerSheet(false) }
         )
     }
 
@@ -338,7 +569,7 @@ fun FilterEditorScreen(
         ThemeSheet(
             currentMode = themeMode,
             onSelect = { themeViewModel.setThemeMode(it) },
-            onDismiss = { showThemeSheet = false }
+            onDismiss = { onShowThemeSheet(false) }
         )
     }
 
@@ -394,7 +625,7 @@ fun EmptyImagePlaceholder() {
         modifier = Modifier.padding(32.dp)
     ) {
         Icon(
-            Icons.Default.Image,
+            Icons.Default.PhotoLibrary,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -412,6 +643,52 @@ fun EmptyImagePlaceholder() {
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun ActionCard(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(120.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
@@ -625,7 +902,6 @@ fun LayerSheet(
     onRemove: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onOpacityChange: (Int, Float) -> Unit,
-    onMultiply: (ColorMatrix) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -690,7 +966,10 @@ fun LayerSheet(
                             }
                         ),
                         border = if (index == selectedIndex) {
-                            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                            androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
                         } else null
                     ) {
                         Column(
