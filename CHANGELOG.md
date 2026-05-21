@@ -2,6 +2,21 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.3] - 2026-05-20
+
+### Fixed
+- **Critical: Preset corruption** - `ColorMatrix.copy()` and `ConvolutionKernel.copy()` shared the `values` array reference. Modifying a preset (e.g., selecting Sepia then editing) would corrupt the original preset. Added `clone()` methods that deep-copy the array.
+- **FilterLayer cloning** - `addLayer()` now clones the matrix/kernel to prevent shared references between the layer and the preset.
+- **ViewModel sharing** - Simplified ViewModel scoping by creating it at the NavHost level instead of using `getBackStackEntry`.
+- **Image loading robustness** - `ImageLoader` now ensures bitmaps are always mutable ARGB_8888 format, with fallback chain: ImageDecoder → BitmapFactory → error.
+- **Loading state display** - FilterEditorScreen shows "Loading image..." while the coroutine loads the bitmap, instead of "No image loaded".
+
+### Added
+- `StableBitmap` with `@Immutable` annotation and identity-based equality
+- `key(bitmap.generationId)` in Image composable for proper recomposition
+- Comprehensive logging in `ImageLoader` and `FilterViewModel.loadImage()`
+- 20+ unit tests covering state transitions, clone semantics, preset integrity
+
 ## [1.0.2] - 2026-05-20
 
 ### Fixed

@@ -3,6 +3,8 @@ package com.realfilters.app.ui.screens
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.realfilters.app.data.repository.FilterRepository
@@ -15,7 +17,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class StableBitmap(val bitmap: Bitmap)
+@Immutable
+data class StableBitmap(val bitmap: Bitmap) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StableBitmap) return false
+        return bitmap === other.bitmap
+    }
+
+    override fun hashCode(): Int = System.identityHashCode(bitmap)
+}
 
 data class FilterUiState(
     val originalBitmap: StableBitmap? = null,
@@ -67,11 +78,14 @@ class FilterViewModel @Inject constructor(
     }
 
     fun loadImage(uri: Uri) {
+        Log.d("FilterViewModel", "loadImage called: uri=$uri")
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
+            Log.d("FilterViewModel", "loadImage: isProcessing=true")
             try {
                 val format = imageLoader.detectFormat(context, uri)
                 val bitmap = imageLoader.loadImage(context, uri)
+                Log.d("FilterViewModel", "loadImage: bitmap=${bitmap != null}, size=${bitmap?.width}x${bitmap?.height}, config=${bitmap?.config}, mutable=${bitmap?.isMutable}")
                 if (bitmap != null) {
                     val stable = StableBitmap(bitmap)
                     _uiState.update {
@@ -84,11 +98,14 @@ class FilterViewModel @Inject constructor(
                             isProcessing = false
                         )
                     }
+                    Log.d("FilterViewModel", "loadImage: state updated, processedBitmap set")
                 } else {
                     _uiState.update { it.copy(error = "Failed to load image", isProcessing = false) }
+                    Log.e("FilterViewModel", "loadImage: bitmap is null")
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isProcessing = false) }
+                Log.e("FilterViewModel", "loadImage: exception", e)
             }
         }
     }
@@ -117,13 +134,13 @@ class FilterViewModel @Inject constructor(
         val state = _uiState.value
         val layer = when (state.editMode) {
             EditMode.COLOR_MATRIX -> FilterLayer(
-                colorMatrix = state.currentColorMatrix,
+                colorMatrix = state.currentColorMatrix.clone(),
                 name = state.currentColorMatrix.name
             )
             EditMode.CONVOLUTION -> {
                 val kernel = state.currentKernel ?: return
                 FilterLayer(
-                    convolutionKernel = kernel,
+                    convolutionKernel = kernel.clone(),
                     name = kernel.name
                 )
             }

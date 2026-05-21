@@ -27,6 +27,8 @@ data class ColorMatrix(
         values[row * 5 + col] = value
     }
 
+    fun clone(): ColorMatrix = ColorMatrix(values = values.copyOf(), name = name)
+
     fun toDisplayString(): String {
         val sb = StringBuilder()
         for (row in 0 until 4) {
@@ -58,6 +60,15 @@ data class ConvolutionKernel(
     val offset: Float = 0f
 ) {
     operator fun get(x: Int, y: Int): Float = values[y * width + x]
+
+    fun clone(): ConvolutionKernel = ConvolutionKernel(
+        values = values.copyOf(),
+        width = width,
+        height = height,
+        name = name,
+        divisor = divisor,
+        offset = offset
+    )
 
     fun toDisplayString(): String {
         val sb = StringBuilder()

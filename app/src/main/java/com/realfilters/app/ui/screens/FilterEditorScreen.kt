@@ -176,20 +176,44 @@ fun FilterEditorScreen(
                 contentAlignment = Alignment.Center
             ) {
                 val displayBitmap = uiState.processedBitmap?.bitmap
-                if (displayBitmap != null) {
-                    Image(
-                        bitmap = displayBitmap.asImageBitmap(),
-                        contentDescription = "Image preview",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    EmptyImagePlaceholder()
+
+                when {
+                    displayBitmap != null -> {
+                        // Use key to force recomposition when bitmap changes
+                        key(displayBitmap.generationId) {
+                            Image(
+                                bitmap = displayBitmap.asImageBitmap(),
+                                contentDescription = "Image preview",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+                    uiState.isProcessing -> {
+                        // Show loading indicator while image loads
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Loading image...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    else -> {
+                        EmptyImagePlaceholder()
+                    }
                 }
 
-                if (uiState.isProcessing) {
+                if (uiState.isProcessing && displayBitmap != null) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
