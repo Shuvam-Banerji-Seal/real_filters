@@ -105,10 +105,10 @@ class ImageLoader @Inject constructor() {
         val converted = if (needsConversion) {
             Log.d(TAG, "Converting bitmap: mutable=${bitmap.isMutable}, config=${bitmap.config}")
             val copy = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-            if (copy !== bitmap) {
+            if (copy != null && copy !== bitmap) {
                 bitmap.recycle()
             }
-            copy ?: return bitmap
+            copy ?: bitmap // fallback to original if copy failed
         } else {
             bitmap
         }

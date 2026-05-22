@@ -53,12 +53,14 @@ class FilterRepository @Inject constructor(
                 layer.colorMatrix != null -> FilterLayerExport(
                     name = layer.name,
                     type = "color_matrix",
+                    enabled = layer.enabled,
                     matrixValues = layer.colorMatrix.values,
                     opacity = layer.opacity
                 )
                 layer.convolutionKernel != null -> FilterLayerExport(
                     name = layer.name,
                     type = "convolution",
+                    enabled = layer.enabled,
                     kernelValues = layer.convolutionKernel.values,
                     kernelWidth = layer.convolutionKernel.width,
                     kernelHeight = layer.convolutionKernel.height,
@@ -66,7 +68,7 @@ class FilterRepository @Inject constructor(
                     kernelOffset = layer.convolutionKernel.offset,
                     opacity = layer.opacity
                 )
-                else -> FilterLayerExport(name = layer.name, type = "identity")
+                else -> FilterLayerExport(name = layer.name, type = "identity", enabled = layer.enabled)
             }
         }
 
@@ -88,6 +90,7 @@ class FilterRepository @Inject constructor(
                         ColorMatrix(it, layerExport.name)
                     },
                     name = layerExport.name,
+                    enabled = layerExport.enabled,
                     opacity = layerExport.opacity
                 )
                 "convolution" -> FilterLayer(
@@ -102,9 +105,10 @@ class FilterRepository @Inject constructor(
                         )
                     },
                     name = layerExport.name,
+                    enabled = layerExport.enabled,
                     opacity = layerExport.opacity
                 )
-                else -> FilterLayer(name = layerExport.name)
+                else -> FilterLayer(name = layerExport.name, enabled = layerExport.enabled)
             }
         }
     }

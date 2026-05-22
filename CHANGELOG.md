@@ -2,6 +2,36 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.6] - 2026-05-22
+
+### Fixed (Second deep audit - 12 more bugs)
+
+**Crash Prevention**
+- `ensureMutable()` no longer returns recycled bitmap when `bitmap.copy()` returns null
+- `applyFilterLayers()` handles null `bitmap.copy()` with double-fallback (config → ARGB_8888 → original)
+- Empty imported JSON layers no longer cause out-of-bounds `selectedLayerIndex`
+
+**Data Integrity**
+- `enabled` layer state now persists through save/load and export/import round-trips
+- `FilterLayerExport` includes `enabled` field in serialization
+- `exportToLayers()` restores `enabled` state on import
+
+**Saturation Filter**
+- Fixed incorrect luminance weights (row vs column index bug)
+- Standardized on Rec. 709 weights (0.2126, 0.7152, 0.0722) matching grayscale filter
+- Full desaturation now produces correct neutral gray
+
+**Compose Lifecycle**
+- `showEditor` and sheet booleans use `rememberSaveable` (survives config changes)
+- `collectAsState()` → `collectAsStateWithLifecycle()` (pauses when backgrounded)
+- `KernelEditorDialog` state keyed on `kernel` parameter
+- `LaunchedEffect` → `remember(w, h)` for synchronous kernel size derivation
+- `LazyColumn` for saved filters has proper height bound
+
+**Performance**
+- `@Immutable` on `ColorMatrix`, `ConvolutionKernel`, `FilterLayer` for recomposition skip
+- `LazyColumn` properly bounded inside `Column`
+
 ## [1.0.5] - 2026-05-22
 
 ### Fixed (26 bugs from multi-agent audit)

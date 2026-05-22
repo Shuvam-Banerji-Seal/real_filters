@@ -2,6 +2,7 @@ package com.realfilters.app.domain.engine
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -10,6 +11,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+@Immutable
 data class ColorMatrix(
     val values: FloatArray = floatArrayOf(
         1f, 0f, 0f, 0f, 0f,
@@ -51,6 +53,7 @@ data class ColorMatrix(
     override fun hashCode(): Int = values.contentHashCode()
 }
 
+@Immutable
 data class ConvolutionKernel(
     val values: FloatArray,
     val width: Int,
@@ -91,6 +94,7 @@ data class ConvolutionKernel(
     override fun hashCode(): Int = values.contentHashCode() * 31 + width * 31 + height
 }
 
+@Immutable
 data class FilterLayer(
     val id: String = java.util.UUID.randomUUID().toString(),
     val colorMatrix: ColorMatrix? = null,
@@ -187,7 +191,8 @@ class ImageProcessingEngine @Inject constructor() {
         withContext(Dispatchers.Default) {
             val config = if (bitmap.config == Bitmap.Config.HARDWARE) Bitmap.Config.ARGB_8888
                          else (bitmap.config ?: Bitmap.Config.ARGB_8888)
-            var current = bitmap.copy(config, true)
+            val initialCopy = bitmap.copy(config, true) ?: bitmap.copy(Bitmap.Config.ARGB_8888, true)
+            var current = initialCopy ?: return@withContext bitmap
 
             for (layer in layers.filter { it.enabled }) {
                 val processed = when {

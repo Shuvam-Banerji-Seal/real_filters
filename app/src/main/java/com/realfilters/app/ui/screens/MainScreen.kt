@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realfilters.app.domain.engine.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,12 +46,12 @@ fun MainScreen(
     themeViewModel: ThemeViewModel,
     viewModel: FilterViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val themeMode by themeViewModel.themeMode.collectAsState()
-    var showPresetSheet by remember { mutableStateOf(false) }
-    var showLayerSheet by remember { mutableStateOf(false) }
-    var showThemeSheet by remember { mutableStateOf(false) }
-    var showEditor by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
+    var showPresetSheet by rememberSaveable { mutableStateOf(false) }
+    var showLayerSheet by rememberSaveable { mutableStateOf(false) }
+    var showThemeSheet by rememberSaveable { mutableStateOf(false) }
+    var showEditor by rememberSaveable { mutableStateOf(false) }
 
     val pickImage = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -212,6 +214,7 @@ private fun HomeContent(
                 )
 
                 LazyColumn(
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.savedFilters) { filter ->
@@ -1156,20 +1159,13 @@ fun KernelEditorDialog(
     onUpdate: (ConvolutionKernel) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var width by remember { mutableStateOf(kernel.width.toString()) }
-    var height by remember { mutableStateOf(kernel.height.toString()) }
-    var divisor by remember { mutableStateOf(kernel.divisor.toString()) }
-    var offset by remember { mutableStateOf(kernel.offset.toString()) }
+    var width by remember(kernel) { mutableStateOf(kernel.width.toString()) }
+    var height by remember(kernel) { mutableStateOf(kernel.height.toString()) }
+    var divisor by remember(kernel) { mutableStateOf(kernel.divisor.toString()) }
+    var offset by remember(kernel) { mutableStateOf(kernel.offset.toString()) }
     val w = (width.toIntOrNull() ?: 3).coerceIn(1, 9)
     val h = (height.toIntOrNull() ?: 3).coerceIn(1, 9)
-    val values = remember { mutableStateListOf(*kernel.values.toTypedArray()) }
-
-    LaunchedEffect(w, h) {
-        if (values.size != w * h) {
-            values.clear()
-            values.addAll(FloatArray(w * h) { 0f }.toTypedArray())
-        }
-    }
+    val values = remember(w, h) { mutableStateListOf(*FloatArray(w * h) { 0f }.toTypedArray()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -345,17 +345,20 @@ class FilterViewModel @Inject constructor(
     fun importFilter(json: String) {
         try {
             val layers = repository.importFilterFromJson(json)
-            if (layers != null) {
+            if (layers != null && layers.isNotEmpty()) {
                 val state = _uiState.value
+                val newLayers = state.layers + layers
                 _uiState.update {
                     it.copy(
-                        layers = it.layers + layers,
-                        selectedLayerIndex = state.layers.size,
+                        layers = newLayers,
+                        selectedLayerIndex = newLayers.size - 1,
                         showImportDialog = false,
                         importJson = ""
                     )
                 }
                 applyFilters()
+            } else if (layers != null) {
+                _uiState.update { it.copy(error = "Imported filter has no layers") }
             } else {
                 _uiState.update { it.copy(error = "Invalid filter format") }
             }

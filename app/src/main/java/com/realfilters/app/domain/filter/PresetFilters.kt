@@ -65,15 +65,18 @@ object PresetFilters {
         name = "Contrast +"
     )
 
-    val saturation = ColorMatrix(
-        floatArrayOf(
-            0.3086f + 0.6914f * 1.5f, 0.3086f - 0.3086f * 1.5f, 0.3086f - 0.3086f * 1.5f, 0f, 0f,
-            0.6094f - 0.6094f * 1.5f, 0.6094f + 0.3906f * 1.5f, 0.6094f - 0.6094f * 1.5f, 0f, 0f,
-            0.0820f - 0.0820f * 1.5f, 0.0820f - 0.0820f * 1.5f, 0.0820f + 0.9180f * 1.5f, 0f, 0f,
-            0f, 0f, 0f, 1f, 0f
-        ),
-        name = "Saturation +"
-    )
+    val saturation = run {
+        val Lu = 0.2126f; val Lg = 0.7152f; val Lb = 0.0722f; val s = 1.5f
+        ColorMatrix(
+            floatArrayOf(
+                Lu + (1f - Lu) * s, Lg * (1f - s),       Lb * (1f - s),       0f, 0f,
+                Lu * (1f - s),       Lg + (1f - Lg) * s,  Lb * (1f - s),       0f, 0f,
+                Lu * (1f - s),       Lg * (1f - s),       Lb + (1f - Lb) * s,  0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ),
+            name = "Saturation +"
+        )
+    }
 
     val redChannel = ColorMatrix(
         floatArrayOf(

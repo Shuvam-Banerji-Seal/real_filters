@@ -20,6 +20,8 @@ data class FilterLayerExport(
     val name: String = "",
     @SerializedName("type")
     val type: String = "",
+    @SerializedName("enabled")
+    val enabled: Boolean = true,
     @SerializedName("matrix_values")
     val matrixValues: FloatArray? = null,
     @SerializedName("kernel_values")
@@ -40,6 +42,7 @@ data class FilterLayerExport(
         if (other !is FilterLayerExport) return false
         return name == other.name &&
                 type == other.type &&
+                enabled == other.enabled &&
                 matrixValues.contentEquals(other.matrixValues) &&
                 kernelValues.contentEquals(other.kernelValues) &&
                 kernelWidth == other.kernelWidth &&
@@ -52,6 +55,7 @@ data class FilterLayerExport(
     override fun hashCode(): Int {
         var result = name.hashCode()
         result = 31 * result + type.hashCode()
+        result = 31 * result + enabled.hashCode()
         result = 31 * result + (matrixValues?.contentHashCode() ?: 0)
         result = 31 * result + (kernelValues?.contentHashCode() ?: 0)
         result = 31 * result + kernelWidth
