@@ -107,7 +107,7 @@ class ImageProcessingEngine @Inject constructor() {
         withContext(Dispatchers.Default) {
             val width = bitmap.width
             val height = bitmap.height
-            val result = Bitmap.createBitmap(width, height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val pixels = IntArray(width * height)
             val outPixels = IntArray(width * height)
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -140,7 +140,7 @@ class ImageProcessingEngine @Inject constructor() {
         withContext(Dispatchers.Default) {
             val width = bitmap.width
             val height = bitmap.height
-            val result = Bitmap.createBitmap(width, height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val pixels = IntArray(width * height)
             val outPixels = IntArray(width * height)
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -185,7 +185,9 @@ class ImageProcessingEngine @Inject constructor() {
 
     suspend fun applyFilterLayers(bitmap: Bitmap, layers: List<FilterLayer>): Bitmap =
         withContext(Dispatchers.Default) {
-            var current = bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, true)
+            val config = if (bitmap.config == Bitmap.Config.HARDWARE) Bitmap.Config.ARGB_8888
+                         else (bitmap.config ?: Bitmap.Config.ARGB_8888)
+            var current = bitmap.copy(config, true)
 
             for (layer in layers.filter { it.enabled }) {
                 val processed = when {
@@ -195,8 +197,10 @@ class ImageProcessingEngine @Inject constructor() {
                 }
 
                 if (layer.opacity < 1f && processed !== current) {
+                    val oldCurrent = current
                     current = blendBitmaps(current, processed, layer.opacity)
                     processed.recycle()
+                    if (oldCurrent !== bitmap) oldCurrent.recycle()
                 } else if (processed !== current) {
                     if (current !== bitmap) current.recycle()
                     current = processed
@@ -226,7 +230,7 @@ class ImageProcessingEngine @Inject constructor() {
     private fun blendBitmaps(base: Bitmap, overlay: Bitmap, opacity: Float): Bitmap {
         val width = base.width
         val height = base.height
-        val result = Bitmap.createBitmap(width, height, base.config ?: Bitmap.Config.ARGB_8888)
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val basePixels = IntArray(width * height)
         val overlayPixels = IntArray(width * height)
         val outPixels = IntArray(width * height)
@@ -238,10 +242,10 @@ class ImageProcessingEngine @Inject constructor() {
             val op = overlayPixels[i]
             val inv = 1f - opacity
             outPixels[i] = Color.argb(
-                (Color.alpha(bp) * inv + Color.alpha(op) * opacity).roundToInt(),
-                (Color.red(bp) * inv + Color.red(op) * opacity).roundToInt(),
-                (Color.green(bp) * inv + Color.green(op) * opacity).roundToInt(),
-                (Color.blue(bp) * inv + Color.blue(op) * opacity).roundToInt()
+                clampInt((Color.alpha(bp) * inv + Color.alpha(op) * opacity).roundToInt(), 0, 255),
+                clampInt((Color.red(bp) * inv + Color.red(op) * opacity).roundToInt(), 0, 255),
+                clampInt((Color.green(bp) * inv + Color.green(op) * opacity).roundToInt(), 0, 255),
+                clampInt((Color.blue(bp) * inv + Color.blue(op) * opacity).roundToInt(), 0, 255)
             )
         }
 

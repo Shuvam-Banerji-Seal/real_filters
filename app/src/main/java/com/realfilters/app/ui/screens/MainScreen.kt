@@ -55,8 +55,8 @@ fun MainScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.loadImage(it)
             showEditor = true
+            viewModel.loadImage(it)
         }
     }
 
@@ -64,18 +64,23 @@ fun MainScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.loadImage(it)
             showEditor = true
+            viewModel.loadImage(it)
         }
     }
 
-    if (showEditor && uiState.originalBitmap != null) {
+    if (showEditor) {
         EditorContent(
             uiState = uiState,
             viewModel = viewModel,
             themeMode = themeMode,
             themeViewModel = themeViewModel,
-            onBack = { showEditor = false },
+            onBack = {
+                showEditor = false
+                showPresetSheet = false
+                showLayerSheet = false
+                showThemeSheet = false
+            },
             showPresetSheet = showPresetSheet,
             showLayerSheet = showLayerSheet,
             showThemeSheet = showThemeSheet,
@@ -388,7 +393,7 @@ private fun EditorContent(
                         )
                         IconButton(
                             onClick = { viewModel.clearError() },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(16.dp))
                         }
@@ -1005,7 +1010,7 @@ fun LayerSheet(
 
                                 IconButton(
                                     onClick = { onToggle(index) },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         if (layer.enabled) Icons.Default.Visibility else Icons.Default.VisibilityOff,
@@ -1019,7 +1024,7 @@ fun LayerSheet(
                                 if (index > 0) {
                                     IconButton(
                                         onClick = { onMove(index, index - 1) },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.ArrowUpward,
@@ -1032,7 +1037,7 @@ fun LayerSheet(
                                 if (index < layers.size - 1) {
                                     IconButton(
                                         onClick = { onMove(index, index + 1) },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.ArrowDownward,
@@ -1044,7 +1049,7 @@ fun LayerSheet(
 
                                 IconButton(
                                     onClick = { onRemove(index) },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         Icons.Default.Delete,

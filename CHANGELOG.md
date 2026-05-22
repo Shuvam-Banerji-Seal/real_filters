@@ -2,6 +2,52 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.5] - 2026-05-22
+
+### Fixed (26 bugs from multi-agent audit)
+
+**Memory Leaks (Critical)**
+- `applyFilters()` now recycles old `processedBitmap` before assigning new one
+- `resetFilters()` now recycles outgoing processed bitmap
+- `loadImage()` now recycles old original/processed bitmaps on new load
+- `applyFilterLayers()` now recycles old `current` during opacity blending
+- `scaleBitmap()` now recycles original bitmap after scaling
+- SVG `InputStream` now properly closed via `.use {}`
+- Added `onCleared()` to cancel jobs and release resources
+
+**Concurrency (High)**
+- `loadImage()` now cancels prior `loadImageJob` and `applyJob`
+- `resetFilters()` now cancels `applyJob`
+- `applyFilters()` reads state inside coroutine (not stale snapshot)
+- `CancellationException` properly rethrown instead of caught
+- All database operations wrapped in try-catch with user-facing errors
+
+**Data Integrity (High)**
+- `selectPresetMatrix()` now clones preset (prevents shared mutable reference)
+- `selectPresetKernel()` now clones preset
+- `updateLayerOpacity()` now clamps to [0f, 1f]
+- `selectLayer()` now validates bounds
+- `moveLayer()` preserves correct selected layer index
+- `importFilter()` now updates `selectedLayerIndex`
+
+**Image Processing (High)**
+- All `Bitmap.createBitmap` calls force `ARGB_8888` (prevents HARDWARE bitmap crash)
+- `blendBitmaps()` now clamps color channels to [0, 255]
+- `calculateInSampleSize()` guards against zero dimensions
+
+**Data Layer (High)**
+- Room database uses `fallbackToDestructiveMigration()`
+- `FilterLayerExport.equals()` now compares all fields including arrays
+- `FilterExport`/`FilterLayerExport` fields have default values (Gson null safety)
+- `FilterSerializer.fromJson()` handles blank input
+
+**UI (Medium)**
+- Sheet state (preset/layer/theme) reset when exiting editor
+- Touch targets increased from 24dp/32dp to 48dp (accessibility)
+- `showEditor` set before load (shows loading indicator instead of blank)
+- Error dismiss button properly sized
+- Layer action buttons properly sized
+
 ## [1.0.4] - 2026-05-20
 
 ### Fixed

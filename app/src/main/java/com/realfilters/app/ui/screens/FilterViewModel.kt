@@ -12,6 +12,7 @@ import com.realfilters.app.domain.engine.*
 import com.realfilters.app.domain.filter.PresetFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -33,7 +34,7 @@ data class FilterUiState(
     val processedBitmap: StableBitmap? = null,
     val layers: List<FilterLayer> = emptyList(),
     val selectedLayerIndex: Int = -1,
-    val currentColorMatrix: ColorMatrix = PresetFilters.identity,
+    val currentColorMatrix: ColorMatrix = PresetFilters.identity.clone(),
     val currentKernel: ConvolutionKernel? = null,
     val isProcessing: Boolean = false,
     val presetColorMatrices: List<ColorMatrix> = PresetFilters.colorMatrices,
@@ -64,10 +65,15 @@ class FilterViewModel @Inject constructor(
     private val repository: FilterRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "FilterViewModel"
+    }
+
     private val _uiState = MutableStateFlow(FilterUiState())
     val uiState: StateFlow<FilterUiState> = _uiState.asStateFlow()
 
     private var applyJob: Job? = null
+    private var loadImageJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -78,16 +84,17 @@ class FilterViewModel @Inject constructor(
     }
 
     fun loadImage(uri: Uri) {
-        Log.d("FilterViewModel", "loadImage called: uri=$uri")
-        viewModelScope.launch {
+        loadImageJob?.cancel()
+        applyJob?.cancel()
+        loadImageJob = viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
-            Log.d("FilterViewModel", "loadImage: isProcessing=true")
             try {
                 val format = imageLoader.detectFormat(context, uri)
                 val bitmap = imageLoader.loadImage(context, uri)
-                Log.d("FilterViewModel", "loadImage: bitmap=${bitmap != null}, size=${bitmap?.width}x${bitmap?.height}, config=${bitmap?.config}, mutable=${bitmap?.isMutable}")
                 if (bitmap != null) {
                     val stable = StableBitmap(bitmap)
+                    val oldOriginal = _uiState.value.originalBitmap?.bitmap
+                    val oldProcessed = _uiState.value.processedBitmap?.bitmap
                     _uiState.update {
                         it.copy(
                             originalBitmap = stable,
@@ -98,24 +105,27 @@ class FilterViewModel @Inject constructor(
                             isProcessing = false
                         )
                     }
-                    Log.d("FilterViewModel", "loadImage: state updated, processedBitmap set")
+                    recycleIfDifferent(oldOriginal, bitmap)
+                    recycleIfDifferent(oldProcessed, oldOriginal)
+                    Log.d(TAG, "loadImage success: ${bitmap.width}x${bitmap.height}")
                 } else {
                     _uiState.update { it.copy(error = "Failed to load image", isProcessing = false) }
-                    Log.e("FilterViewModel", "loadImage: bitmap is null")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isProcessing = false) }
-                Log.e("FilterViewModel", "loadImage: exception", e)
+                Log.e(TAG, "loadImage failed", e)
             }
         }
     }
 
     fun selectPresetMatrix(matrix: ColorMatrix) {
-        _uiState.update { it.copy(currentColorMatrix = matrix) }
+        _uiState.update { it.copy(currentColorMatrix = matrix.clone()) }
     }
 
     fun selectPresetKernel(kernel: ConvolutionKernel) {
-        _uiState.update { it.copy(currentKernel = kernel) }
+        _uiState.update { it.copy(currentKernel = kernel.clone()) }
     }
 
     fun updateColorMatrix(matrix: ColorMatrix) {
@@ -132,6 +142,7 @@ class FilterViewModel @Inject constructor(
 
     fun addLayer() {
         val state = _uiState.value
+        if (state.originalBitmap == null) return
         val layer = when (state.editMode) {
             EditMode.COLOR_MATRIX -> FilterLayer(
                 colorMatrix = state.currentColorMatrix.clone(),
@@ -176,14 +187,17 @@ class FilterViewModel @Inject constructor(
     fun updateLayerOpacity(index: Int, opacity: Float) {
         val state = _uiState.value
         if (index < 0 || index >= state.layers.size) return
+        val clampedOpacity = opacity.coerceIn(0f, 1f)
         val newLayers = state.layers.toMutableList().apply {
-            this[index] = this[index].copy(opacity = opacity)
+            this[index] = this[index].copy(opacity = clampedOpacity)
         }
         _uiState.update { it.copy(layers = newLayers) }
         applyFilters()
     }
 
     fun selectLayer(index: Int) {
+        val state = _uiState.value
+        if (index < -1 || index >= state.layers.size) return
         _uiState.update { it.copy(selectedLayerIndex = index) }
     }
 
@@ -193,7 +207,14 @@ class FilterViewModel @Inject constructor(
         val newLayers = state.layers.toMutableList().apply {
             add(to, removeAt(from))
         }
-        _uiState.update { it.copy(layers = newLayers, selectedLayerIndex = to) }
+        val newSelected = when (state.selectedLayerIndex) {
+            from -> to
+            in minOf(from, to)..maxOf(from, to) -> {
+                if (from < to) state.selectedLayerIndex - 1 else state.selectedLayerIndex + 1
+            }
+            else -> state.selectedLayerIndex
+        }
+        _uiState.update { it.copy(layers = newLayers, selectedLayerIndex = newSelected) }
         applyFilters()
     }
 
@@ -218,82 +239,131 @@ class FilterViewModel @Inject constructor(
         applyJob = viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true) }
             try {
-                val result = if (state.layers.isEmpty()) {
+                val currentState = _uiState.value
+                val layersToApply = currentState.layers
+                val result = if (layersToApply.isEmpty()) {
                     original
                 } else {
-                    engine.applyFilterLayers(original, state.layers)
+                    engine.applyFilterLayers(original, layersToApply)
                 }
+                val oldProcessed = _uiState.value.processedBitmap?.bitmap
                 _uiState.update {
                     it.copy(
                         processedBitmap = StableBitmap(result),
                         isProcessing = false
                     )
                 }
+                if (oldProcessed != null && oldProcessed !== original) {
+                    oldProcessed.recycle()
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isProcessing = false) }
+                Log.e(TAG, "applyFilters failed", e)
             }
         }
     }
 
     fun resetFilters() {
+        applyJob?.cancel()
         val state = _uiState.value
+        val oldProcessed = state.processedBitmap?.bitmap
         _uiState.update {
             it.copy(
                 processedBitmap = state.originalBitmap,
                 layers = emptyList(),
                 selectedLayerIndex = -1,
-                currentColorMatrix = PresetFilters.identity,
+                currentColorMatrix = PresetFilters.identity.clone(),
                 currentKernel = null
             )
+        }
+        if (oldProcessed != null && oldProcessed !== state.originalBitmap?.bitmap) {
+            oldProcessed.recycle()
         }
     }
 
     fun saveFilter(name: String) {
         val state = _uiState.value
         if (state.layers.isEmpty()) return
+        _uiState.update { it.copy(showSaveDialog = false, filterName = "") }
         viewModelScope.launch {
-            repository.saveFilter(name, state.layers)
-            _uiState.update { it.copy(showSaveDialog = false, filterName = "") }
+            try {
+                repository.saveFilter(name, state.layers)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to save: ${e.message}") }
+                Log.e(TAG, "saveFilter failed", e)
+            }
         }
     }
 
     fun loadSavedFilter(id: Long) {
         viewModelScope.launch {
-            val layers = repository.loadFilter(id)
-            if (layers != null) {
-                _uiState.update { it.copy(layers = layers, selectedLayerIndex = layers.size - 1) }
-                applyFilters()
+            try {
+                val layers = repository.loadFilter(id)
+                if (layers != null) {
+                    _uiState.update { it.copy(layers = layers, selectedLayerIndex = layers.size - 1) }
+                    applyFilters()
+                } else {
+                    _uiState.update { it.copy(error = "Failed to load saved filter") }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to load: ${e.message}") }
+                Log.e(TAG, "loadSavedFilter failed", e)
             }
         }
     }
 
     fun deleteSavedFilter(id: Long) {
         viewModelScope.launch {
-            repository.deleteFilter(id)
+            try {
+                repository.deleteFilter(id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to delete: ${e.message}") }
+                Log.e(TAG, "deleteSavedFilter failed", e)
+            }
         }
     }
 
     fun exportCurrentFilter(): String? {
         val state = _uiState.value
-        if (state.layers.isEmpty()) return null
+        if (state.layers.isEmpty()) {
+            _uiState.update { it.copy(error = "No layers to export") }
+            return null
+        }
         val json = repository.exportFilterToJson("Exported Filter", state.layers)
         _uiState.update { it.copy(exportJson = json, showExportDialog = true) }
         return json
     }
 
     fun importFilter(json: String) {
-        val layers = repository.importFilterFromJson(json)
-        if (layers != null) {
-            _uiState.update {
-                it.copy(
-                    layers = it.layers + layers,
-                    showImportDialog = false,
-                    importJson = ""
-                )
+        try {
+            val layers = repository.importFilterFromJson(json)
+            if (layers != null) {
+                val state = _uiState.value
+                _uiState.update {
+                    it.copy(
+                        layers = it.layers + layers,
+                        selectedLayerIndex = state.layers.size,
+                        showImportDialog = false,
+                        importJson = ""
+                    )
+                }
+                applyFilters()
+            } else {
+                _uiState.update { it.copy(error = "Invalid filter format") }
             }
-            applyFilters()
-        } else {
-            _uiState.update { it.copy(error = "Invalid filter format") }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _uiState.update { it.copy(error = "Import failed: ${e.message}") }
+            Log.e(TAG, "importFilter failed", e)
         }
     }
 
@@ -309,4 +379,16 @@ class FilterViewModel @Inject constructor(
     fun updateFilterName(name: String) = _uiState.update { it.copy(filterName = name) }
     fun updateImportJson(json: String) = _uiState.update { it.copy(importJson = json) }
     fun clearError() = _uiState.update { it.copy(error = null) }
+
+    private fun recycleIfDifferent(bitmap: Bitmap?, other: Bitmap?) {
+        if (bitmap != null && bitmap !== other && !bitmap.isRecycled) {
+            bitmap.recycle()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        applyJob?.cancel()
+        loadImageJob?.cancel()
+    }
 }
