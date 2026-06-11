@@ -1,3 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Real Filters</string>
+    <string name="home_title">Real Filters</string>
+    <string name="home_tap_to_load">Tap to load an image</string>
+    <string name="home_supported_formats">JPEG, PNG, GIF, BMP, WebP, TIFF, HEIF, SVG</string>
+    <string name="home_gallery">Gallery</string>
+    <string name="home_gallery_subtitle">Pick from gallery</string>
+    <string name="home_browse">Browse</string>
+    <string name="home_browse_subtitle">Open any file</string>
+    <string name="home_saved_filters">Saved Filters</string>
+    <string name="home_saved_filters_empty">No saved filters yet. Save a filter from the editor.</string>
+
+    <string name="editor_title">Filter Editor</string>
+    <string name="editor_layers_active">%1$d layer%2$s active</string>
+    <string name="editor_presets">Presets</string>
+    <string name="editor_layers">Layers</string>
+    <string name="editor_edit">Edit</string>
+    <string name="editor_add">Add</string>
+    <string name="editor_theme">Theme</string>
+    <string name="editor_import">Import</string>
+    <string name="editor_export">Export</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_reset">Reset</string>
+
+    <string name="chip_color_matrix">Color Matrix</string>
+    <string name="chip_convolution">Convolution</string>
+    <string name="editor_current">Current: %1$s</string>
+    <string name="editor_current_none">Current: None selected</string>
+    <string name="editor_select_kernel">Select a kernel from presets</string>
+
+    <string name="processing">Processing...</string>
+    <string name="loading_image">Loading image...</string>
+    <string name="no_image_loaded">No image loaded</string>
+    <string name="no_image_hint">Go back and pick an image to start editing</string>
+
+    <string name="preset_filters_title">Preset Filters</string>
+    <string name="preset_color_matrices">Color Matrices</string>
+    <string name="preset_convolution_kernels">Convolution Kernels</string>
+
+    <string name="layer_sheet_title">Filter Layers</string>
+    <string name="layer_sheet_empty">No layers yet</string>
+    <string name="layer_sheet_empty_hint">Select a preset and tap + to add</string>
+    <string name="layer_sheet_subtitle">Applied top to bottom. Tap to select, use arrows to reorder.</string>
+    <string name="layer_opacity">Opacity: %1$d%%</string>
+    <string name="layer_color_matrix">Color Matrix</string>
+    <string name="layer_convolution">Convolution</string>
+    <string name="layer_type_identity">Identity</string>
+    <string name="layer_toggle_visibility">Toggle layer visibility for %1$s</string>
+    <string name="layer_move_up">Move %1$s up</string>
+    <string name="layer_move_down">Move %1$s down</string>
+    <string name="layer_remove">Remove layer %1$s</string>
+
+    <string name="theme_title">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_light_desc">Always use light theme</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_dark_desc">Always use dark theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_system_desc">Follow system setting</string>
+
+    <string name="dialog_dismiss">Dismiss</string>
+    <string name="dialog_apply">Apply</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_copy">Copy</string>
+    <string name="dialog_close">Close</string>
+    <string name="dialog_save">Save</string>
+
+    <string name="matrix_editor_title">Edit Color Matrix</string>
+    <string name="matrix_editor_subtitle">4×5 color transformation matrix</string>
+    <string name="kernel_editor_title">Edit Convolution Kernel</string>
+    <string name="kernel_width">W</string>
+    <string name="kernel_height">H</string>
+    <string name="kernel_divisor">Div</string>
+    <string name="kernel_offset">Off</string>
+
+    <string name="save_filter_title">Save Filter</string>
+    <string name="save_filter_name_label">Filter Name</string>
+
+    <string name="export_title">Export Filter</string>
+    <string name="export_subtitle">Copy this JSON to share your filter:</string>
+    <string name="export_copied">Filter copied to clipboard</string>
+
+    <string name="import_title">Import Filter</string>
+    <string name="import_subtitle">Paste a filter JSON to import:</string>
+    <string name="import_json_label">Filter JSON</string>
+
+    <string name="error_failed_to_load">Failed to load image</string>
+    <string name="error_no_layers_to_export">No layers to export</string>
+    <string name="error_import_no_layers">Imported filter has no layers</string>
+    <string name="error_import_invalid">Invalid filter format</string>
+    <string name="error_save_failed">Failed to save: %1$s</string>
+    <string name="error_load_failed">Failed to load saved filter</string>
+    <string name="error_load_filter_failed">Failed to load: %1$s</string>
+    <string name="error_delete_failed">Failed to delete: %1$s</string>
+    <string name="error_import_failed">Import failed: %1$s</string>
+    <string name="error_generic">Error: %1$s</string>
+
+    <string name="cd_image_preview">Image preview</string>
+    <string name="cd_pick_image">Pick Image</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_filter_icon">Filter</string>
+    <string name="cd_delete">Delete saved filter %1$s</string>
+    <string name="cd_empty_state">No image</string>
 </resources>

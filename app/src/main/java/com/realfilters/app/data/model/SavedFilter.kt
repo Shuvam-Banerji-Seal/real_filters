@@ -1,9 +1,13 @@
 package com.realfilters.app.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "saved_filters")
+@Entity(
+    tableName = "saved_filters",
+    indices = [Index(value = ["createdAt"])]
+)
 data class SavedFilter(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

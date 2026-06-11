@@ -2,6 +2,22 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.7] - 2026-05-22
+
+### Added
+- **Intent handling for shared images** - App can now receive images shared from other apps (ACTION_VIEW/SEND with image/*)
+- **DataStore persistence for theme** - Theme preference (Light/Dark/System) now persists across app restarts
+- **77+ strings externalized to strings.xml** - Foundation for i18n/localization
+
+### Improved
+- **Performance: `remember` for matrix/kernel display strings** - avoids recomputing 20-81 `String.format` calls per recomposition
+- **LazyColumn key parameters** - `key = { it.id }` for saved filters, `key = { it.name }` for presets
+- **Database index on `createdAt`** - faster sorting of saved filters
+- **MainActivity handles onNewIntent** - supports re-sharing while app is running
+
+### Fixed
+- **App not responding to shared images** - Manifest declared intent-filters but MainActivity didn't read intent.data
+
 ## [1.0.6] - 2026-05-22
 
 ### Fixed (Second deep audit - 12 more bugs)

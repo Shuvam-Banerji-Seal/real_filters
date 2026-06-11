@@ -44,7 +44,8 @@ import com.realfilters.app.domain.engine.*
 @Composable
 fun MainScreen(
     themeViewModel: ThemeViewModel,
-    viewModel: FilterViewModel = hiltViewModel()
+    viewModel: FilterViewModel = hiltViewModel(),
+    initialImageUri: Uri? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
@@ -52,6 +53,15 @@ fun MainScreen(
     var showLayerSheet by rememberSaveable { mutableStateOf(false) }
     var showThemeSheet by rememberSaveable { mutableStateOf(false) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
+    var initialImageHandled by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(initialImageUri, initialImageHandled) {
+        if (!initialImageHandled && initialImageUri != null) {
+            initialImageHandled = true
+            viewModel.loadImage(initialImageUri)
+            showEditor = true
+        }
+    }
 
     val pickImage = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -217,7 +227,7 @@ private fun HomeContent(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.savedFilters) { filter ->
+                    items(uiState.savedFilters, key = { it.id }) { filter ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -533,12 +543,15 @@ private fun EditorContent(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(
+                        val displayString = remember(uiState.currentColorMatrix, uiState.currentKernel) {
                             if (uiState.editMode == EditMode.COLOR_MATRIX) {
                                 uiState.currentColorMatrix.toDisplayString()
                             } else {
                                 uiState.currentKernel?.toDisplayString() ?: "Select a kernel from presets"
-                            },
+                            }
+                        }
+                        Text(
+                            displayString,
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
@@ -862,7 +875,7 @@ fun PresetSheet(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.presetColorMatrices) { matrix ->
+                items(uiState.presetColorMatrices, key = { it.name }) { matrix ->
                     FilterChip(
                         selected = uiState.currentColorMatrix.name == matrix.name,
                         onClick = { onSelectMatrix(matrix) },
@@ -885,7 +898,7 @@ fun PresetSheet(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.presetKernels) { kernel ->
+                items(uiState.presetKernels, key = { it.name }) { kernel ->
                     FilterChip(
                         selected = uiState.currentKernel?.name == kernel.name,
                         onClick = { onSelectKernel(kernel) },

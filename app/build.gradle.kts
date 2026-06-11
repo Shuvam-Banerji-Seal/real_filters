@@ -14,8 +14,8 @@ android {
         applicationId = "com.realfilters.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -122,6 +122,9 @@ dependencies {
 
     // Gson for filter export/import
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // DataStore for theme persistence
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
