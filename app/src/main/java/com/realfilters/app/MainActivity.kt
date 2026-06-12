@@ -1,6 +1,7 @@
 package com.realfilters.app
 
 import android.content.Intent
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,10 +12,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,9 +26,17 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private var pendingImageUri by mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Try to take a persistable read permission so the URI survives process death.
+        extractImageUri(intent)?.let { uri ->
+            tryTakePersistableRead(uri)
+            pendingImageUri = uri
+        }
         setContent {
             val themeViewModel: ThemeViewModel = hiltViewModel()
             val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
@@ -47,7 +54,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     MainScreen(
                         themeViewModel = themeViewModel,
-                        initialImageUri = extractImageUri(intent)
+                        initialImageUri = pendingImageUri,
+                        onInitialImageConsumed = { pendingImageUri = null }
                     )
                 }
             }
@@ -57,27 +65,24 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        setContent {
-            val themeViewModel: ThemeViewModel = hiltViewModel()
-            val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
+        // Do NOT call setContent here - the existing composition is reused.
+        // Surface the new URI through the state and clear it once consumed.
+        extractImageUri(intent)?.let { uri ->
+            tryTakePersistableRead(uri)
+            pendingImageUri = uri
+        }
+    }
 
-            val darkTheme = when (themeMode) {
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-                ThemeMode.SYSTEM -> isSystemInDarkTheme()
-            }
-
-            RealFiltersTheme(darkTheme = darkTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainScreen(
-                        themeViewModel = themeViewModel,
-                        initialImageUri = extractImageUri(intent)
-                    )
-                }
-            }
+    private fun tryTakePersistableRead(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: SecurityException) {
+            // URI was not granted with FLAG_GRANT_PERSISTABLE_URI_PERMISSION; that's fine
+        } catch (_: Throwable) {
+            // Some content providers don't support persistable permissions; ignore
         }
     }
 

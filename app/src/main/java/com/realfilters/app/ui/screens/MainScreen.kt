@@ -45,7 +45,8 @@ import com.realfilters.app.domain.engine.*
 fun MainScreen(
     themeViewModel: ThemeViewModel,
     viewModel: FilterViewModel = hiltViewModel(),
-    initialImageUri: Uri? = null
+    initialImageUri: Uri? = null,
+    onInitialImageConsumed: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
@@ -60,6 +61,7 @@ fun MainScreen(
             initialImageHandled = true
             viewModel.loadImage(initialImageUri)
             showEditor = true
+            onInitialImageConsumed()
         }
     }
 
@@ -1130,9 +1132,9 @@ fun MatrixEditorDialog(
                     ) {
                         for (col in 0 until 5) {
                             OutlinedTextField(
-                                value = String.format("%.3f", values[row * 5 + col]),
+                                value = String.format(java.util.Locale.US, "%.3f", values[row * 5 + col]),
                                 onValueChange = { newVal ->
-                                    val parsed = newVal.toFloatOrNull() ?: return@OutlinedTextField
+                                    val parsed = newVal.replace(',', '.').toFloatOrNull() ?: return@OutlinedTextField
                                     values[row * 5 + col] = parsed
                                 },
                                 modifier = Modifier
@@ -1142,6 +1144,7 @@ fun MatrixEditorDialog(
                                     fontSize = 9.sp,
                                     textAlign = TextAlign.Center
                                 ),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
                                 label = { Text(labels[col], fontSize = 7.sp) },
                                 shape = RoundedCornerShape(6.dp)
@@ -1178,7 +1181,14 @@ fun KernelEditorDialog(
     var offset by remember(kernel) { mutableStateOf(kernel.offset.toString()) }
     val w = (width.toIntOrNull() ?: 3).coerceIn(1, 9)
     val h = (height.toIntOrNull() ?: 3).coerceIn(1, 9)
-    val values = remember(w, h) { mutableStateListOf(*FloatArray(w * h) { 0f }.toTypedArray()) }
+    // Seed values from the incoming kernel and preserve existing entries when
+    // the user resizes within range; only zero-fill newly added slots.
+    val values = remember(kernel, w, h) {
+        val src = kernel.values
+        val total = w * h
+        val seeded = FloatArray(total) { i -> if (i < src.size) src[i] else 0f }
+        mutableStateListOf<Float>().apply { addAll(seeded.toList()) }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1186,7 +1196,7 @@ fun KernelEditorDialog(
             Text("Edit Convolution Kernel", fontWeight = FontWeight.Bold)
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1217,6 +1227,15 @@ fun KernelEditorDialog(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp)
                     )
+                    OutlinedTextField(
+                        value = offset,
+                        onValueChange = { offset = it },
+                        label = { Text("Off") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -1228,9 +1247,9 @@ fun KernelEditorDialog(
                         for (x in 0 until w) {
                             val idx = y * w + x
                             OutlinedTextField(
-                                value = if (idx < values.size) String.format("%.2f", values[idx]) else "0.00",
+                                value = String.format(java.util.Locale.US, "%.2f", values.getOrElse(idx) { 0f }),
                                 onValueChange = { newVal ->
-                                    val parsed = newVal.toFloatOrNull() ?: return@OutlinedTextField
+                                    val parsed = newVal.replace(',', '.').toFloatOrNull() ?: return@OutlinedTextField
                                     if (idx < values.size) values[idx] = parsed
                                 },
                                 modifier = Modifier
@@ -1258,8 +1277,8 @@ fun KernelEditorDialog(
                             width = w,
                             height = h,
                             name = "Custom ${w}×$h",
-                            divisor = divisor.toFloatOrNull() ?: 1f,
-                            offset = offset.toFloatOrNull() ?: 0f
+                            divisor = divisor.replace(',', '.').toFloatOrNull() ?: 1f,
+                            offset = offset.replace(',', '.').toFloatOrNull() ?: 0f
                         )
                     )
                     onDismiss()

@@ -16,6 +16,11 @@ import javax.inject.Singleton
 class FilterRepository @Inject constructor(
     private val filterDao: FilterDao
 ) {
+    companion object {
+        private const val MAX_IMPORT_LAYERS = 64
+        private const val MAX_KERNEL_SIZE = 9
+        private const val EXPECTED_MATRIX_VALUES = 20
+    }
     fun getAllSavedFilters(): Flow<List<SavedFilter>> = filterDao.getAllFilters()
 
     suspend fun saveFilter(name: String, layers: List<FilterLayer>): Long {
@@ -44,6 +49,9 @@ class FilterRepository @Inject constructor(
 
     fun importFilterFromJson(json: String): List<FilterLayer>? {
         val export = FilterSerializer.fromJson(json) ?: return null
+        if (export.layers.size > MAX_IMPORT_LAYERS) {
+            return null // Exceeds safety cap; surface as invalid format
+        }
         return exportToLayers(export)
     }
 
@@ -86,21 +94,32 @@ class FilterRepository @Inject constructor(
         return export.layers.map { layerExport ->
             when (layerExport.type) {
                 "color_matrix" -> FilterLayer(
-                    colorMatrix = layerExport.matrixValues?.let {
-                        ColorMatrix(it, layerExport.name)
+                    colorMatrix = layerExport.matrixValues?.let { values ->
+                        if (values.size != EXPECTED_MATRIX_VALUES) {
+                            return null // Invalid matrix; abort entire import
+                        }
+                        ColorMatrix(values, layerExport.name)
                     },
                     name = layerExport.name,
                     enabled = layerExport.enabled,
                     opacity = layerExport.opacity
                 )
                 "convolution" -> FilterLayer(
-                    convolutionKernel = layerExport.kernelValues?.let {
+                    convolutionKernel = layerExport.kernelValues?.let { values ->
+                        val w = layerExport.kernelWidth
+                        val h = layerExport.kernelHeight
+                        if (w <= 0 || h <= 0 || w > MAX_KERNEL_SIZE || h > MAX_KERNEL_SIZE) {
+                            return null
+                        }
+                        if (values.size != w * h) {
+                            return null
+                        }
                         ConvolutionKernel(
-                            values = it,
-                            width = layerExport.kernelWidth,
-                            height = layerExport.kernelHeight,
+                            values = values,
+                            width = w,
+                            height = h,
                             name = layerExport.name,
-                            divisor = layerExport.kernelDivisor,
+                            divisor = if (layerExport.kernelDivisor == 0f) 1f else layerExport.kernelDivisor,
                             offset = layerExport.kernelOffset
                         )
                     },

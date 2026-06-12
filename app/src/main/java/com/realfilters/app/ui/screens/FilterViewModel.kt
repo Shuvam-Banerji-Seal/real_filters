@@ -13,9 +13,11 @@ import com.realfilters.app.domain.filter.PresetFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @Immutable
@@ -86,7 +88,7 @@ class FilterViewModel @Inject constructor(
     fun loadImage(uri: Uri) {
         loadImageJob?.cancel()
         applyJob?.cancel()
-        loadImageJob = viewModelScope.launch {
+        loadImageJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isProcessing = true, error = null) }
             try {
                 val format = imageLoader.detectFormat(context, uri)
@@ -113,8 +115,11 @@ class FilterViewModel @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: OutOfMemoryError) {
+                _uiState.update { it.copy(error = "Image is too large to load", isProcessing = false) }
+                Log.e(TAG, "loadImage OOM", e)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isProcessing = false) }
+                _uiState.update { it.copy(error = e.message ?: "Failed to load image", isProcessing = false) }
                 Log.e(TAG, "loadImage failed", e)
             }
         }
@@ -143,6 +148,10 @@ class FilterViewModel @Inject constructor(
     fun addLayer() {
         val state = _uiState.value
         if (state.originalBitmap == null) return
+        if (state.layers.size >= ImageProcessingEngine.MAX_LAYERS) {
+            _uiState.update { it.copy(error = "Maximum ${ImageProcessingEngine.MAX_LAYERS} layers reached") }
+            return
+        }
         val layer = when (state.editMode) {
             EditMode.COLOR_MATRIX -> FilterLayer(
                 colorMatrix = state.currentColorMatrix.clone(),
@@ -258,8 +267,14 @@ class FilterViewModel @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: OutOfMemoryError) {
+                _uiState.update { it.copy(error = "Image is too large to process", isProcessing = false) }
+                Log.e(TAG, "applyFilters OOM", e)
+            } catch (e: IllegalArgumentException) {
+                _uiState.update { it.copy(error = e.message ?: "Invalid filter", isProcessing = false) }
+                Log.e(TAG, "applyFilters invalid arg", e)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isProcessing = false) }
+                _uiState.update { it.copy(error = e.message ?: "Filter processing failed", isProcessing = false) }
                 Log.e(TAG, "applyFilters failed", e)
             }
         }
@@ -347,7 +362,16 @@ class FilterViewModel @Inject constructor(
             val layers = repository.importFilterFromJson(json)
             if (layers != null && layers.isNotEmpty()) {
                 val state = _uiState.value
-                val newLayers = state.layers + layers
+                val availableSlots = ImageProcessingEngine.MAX_LAYERS - state.layers.size
+                if (availableSlots <= 0) {
+                    _uiState.update { it.copy(error = "Maximum ${ImageProcessingEngine.MAX_LAYERS} layers reached", showImportDialog = false, importJson = "") }
+                    return
+                }
+                val layersToAdd = if (layers.size > availableSlots) {
+                    _uiState.update { it.copy(error = "Only $availableSlots layer slots available; truncating import") }
+                    layers.take(availableSlots)
+                } else layers
+                val newLayers = state.layers + layersToAdd
                 _uiState.update {
                     it.copy(
                         layers = newLayers,
@@ -365,7 +389,7 @@ class FilterViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _uiState.update { it.copy(error = "Import failed: ${e.message}") }
+            _uiState.update { it.copy(error = "Import failed: ${e.message ?: "unknown error"}") }
             Log.e(TAG, "importFilter failed", e)
         }
     }
@@ -393,5 +417,12 @@ class FilterViewModel @Inject constructor(
         super.onCleared()
         applyJob?.cancel()
         loadImageJob?.cancel()
+        // Recycle any held bitmaps to free native memory promptly.
+        val state = _uiState.value
+        state.originalBitmap?.bitmap?.takeIf { !it.isRecycled }?.recycle()
+        val processed = state.processedBitmap?.bitmap
+        if (processed != null && processed !== state.originalBitmap?.bitmap && !processed.isRecycled) {
+            processed.recycle()
+        }
     }
 }

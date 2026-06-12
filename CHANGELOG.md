@@ -2,6 +2,32 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.8] - 2026-05-23
+
+### Fixed
+- **OutOfMemoryError no longer crashes the app** - OOM during `loadImage` and `applyFilters` is now caught with a friendly "Image is too large" message
+- **Bitmap leaks on cancellation** - `applyFilterLayers` and `applyColorMatrix`/`applyConvolution` now wrap allocations in `try/finally` and recycle on exception
+- **Bitmap leaks on ViewModel clear** - `onCleared` now recycles both `originalBitmap` and `processedBitmap`
+- **Kernel values wiped when resizing** - resizing W/H now preserves existing values where possible and zeros only new slots
+- **Missing kernel `Offset` field** - the kernel editor now exposes the `offset` field
+- **European decimal separator** - matrix/kernel editors now accept `,` as decimal separator; all `String.format` calls use `Locale.US`
+- **SVG viewBox-only files** - SVGs without `width`/`height` attributes no longer collapse to 1×1
+- **Zero-dimension bitmaps** - `scaleBitmap` now warns instead of silently returning invalid bitmaps
+- **Import without persistable permission** - `OpenDocument` URIs now take persistable read permission
+- **`onNewIntent` leaked composition** - replaced `setContent` re-call with `mutableStateOf<Uri?>` to avoid re-creating the composition tree
+
+### Added
+- **`EngineError` sealed class** - structured errors for the image-processing pipeline
+- **Cooperative cancellation in pixel loops** - `ensureActive()` is checked every 256K pixels (matrix) and every 64 rows (convolution)
+- **Layer count cap** - `MAX_LAYERS = 32` enforced in both `addLayer` and `applyFilterLayers`
+- **Import validation** - imported matrices must have exactly 20 values; kernels must have `width * height` values, with dimensions 1..9
+- **`Locale.US` everywhere** - all float formatting now locale-pinned
+- **Zero-dimension image rejection** - bitmap factory rejects images with `outWidth <= 0 || outHeight <= 0`
+- **20 new unit tests** - `EngineDataClassesTest`, `FilterImportValidationTest`
+
+### Performance
+- **Disk I/O on `Dispatchers.IO`** - image decoding no longer blocks the main thread
+
 ## [1.0.7] - 2026-05-22
 
 ### Added
