@@ -111,7 +111,7 @@ class FilterViewModel @Inject constructor(
                     recycleIfDifferent(oldProcessed, oldOriginal)
                     Log.d(TAG, "loadImage success: ${bitmap.width}x${bitmap.height}")
                 } else {
-                    _uiState.update { it.copy(error = "Failed to load image", isProcessing = false) }
+                    _uiState.update { it.copy(error = "Failed to load image. The format may be unsupported or the file unreadable.", isProcessing = false) }
                 }
             } catch (e: CancellationException) {
                 throw e

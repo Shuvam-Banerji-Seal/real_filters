@@ -27,15 +27,19 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private var pendingImageUri by mutableStateOf<Uri?>(null)
+    // Wrapped in mutableStateOf so Compose recomposes when assigned outside the
+    // composition (e.g. in onNewIntent or before setContent). This is the only
+    // correct way to bridge Activity-scoped state to Compose.
+    private var pendingImageUriState by mutableStateOf<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Try to take a persistable read permission so the URI survives process death.
-        extractImageUri(intent)?.let { uri ->
+        // Seed the pending URI from the launch intent before the first composition.
+        pendingImageUriState = extractImageUri(intent)?.also { uri ->
+            // Persistable read permission must be taken before setContent
+            // because the URI may become unreadable on configuration change.
             tryTakePersistableRead(uri)
-            pendingImageUri = uri
         }
         setContent {
             val themeViewModel: ThemeViewModel = hiltViewModel()
@@ -54,8 +58,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     MainScreen(
                         themeViewModel = themeViewModel,
-                        initialImageUri = pendingImageUri,
-                        onInitialImageConsumed = { pendingImageUri = null }
+                        initialImageUri = pendingImageUriState,
+                        onInitialImageConsumed = { pendingImageUriState = null }
                     )
                 }
             }
@@ -66,10 +70,10 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         // Do NOT call setContent here - the existing composition is reused.
-        // Surface the new URI through the state and clear it once consumed.
+        // Update the pending URI via the observed state; MainScreen will react.
         extractImageUri(intent)?.let { uri ->
             tryTakePersistableRead(uri)
-            pendingImageUri = uri
+            pendingImageUriState = uri
         }
     }
 

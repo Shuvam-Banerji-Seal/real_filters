@@ -53,15 +53,32 @@ fun MainScreen(
     var showPresetSheet by rememberSaveable { mutableStateOf(false) }
     var showLayerSheet by rememberSaveable { mutableStateOf(false) }
     var showThemeSheet by rememberSaveable { mutableStateOf(false) }
+    // Only show the editor once an image is actually loaded (originalBitmap != null).
+    // Previously showEditor was set immediately on URI receipt, which produced a
+    // broken editor with the "No image loaded" placeholder when the load failed.
     var showEditor by rememberSaveable { mutableStateOf(false) }
     var initialImageHandled by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialImageUri, initialImageHandled) {
         if (!initialImageHandled && initialImageUri != null) {
             initialImageHandled = true
+            // Don't flip showEditor yet - wait for the load to actually succeed.
+            // The EditorContent reads uiState.originalBitmap and will show the
+            // empty placeholder if we open it before the image arrives.
             viewModel.loadImage(initialImageUri)
-            showEditor = true
             onInitialImageConsumed()
+        }
+    }
+
+    // Navigate to the editor the moment the image is available, and pop back
+    // to the home screen if the image failed to load (error != null while no
+    // bitmap is present).
+    LaunchedEffect(uiState.originalBitmap, uiState.error) {
+        val hasImage = uiState.originalBitmap != null
+        val loadFailed = uiState.error != null && !hasImage && initialImageHandled
+        when {
+            hasImage -> showEditor = true
+            loadFailed -> showEditor = false
         }
     }
 
@@ -69,7 +86,7 @@ fun MainScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            showEditor = true
+            // Don't set showEditor yet - wait for the load to actually complete.
             viewModel.loadImage(it)
         }
     }
@@ -78,7 +95,7 @@ fun MainScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            showEditor = true
+            // Same: defer showEditor until uiState.originalBitmap is non-null.
             viewModel.loadImage(it)
         }
     }

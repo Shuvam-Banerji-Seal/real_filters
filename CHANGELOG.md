@@ -2,6 +2,13 @@
 
 All notable changes to Real Filters will be documented in this file.
 
+## [1.0.9] - 2026-05-23
+
+### Fixed
+- **"App fails on open"** - When an image is shared with the app (ACTION_VIEW/SEND) but fails to load (SecurityException, missing file, unsupported format), the Filter Editor would open in a broken state with a "No image loaded" placeholder. Now the app stays on the home screen and surfaces a clear error message.
+- **`showEditor` no longer flips before image loads** - both the initial-image and the picker-result flows now wait for `uiState.originalBitmap != null` before navigating to the editor.
+- **`pendingImageUri` properly bridges Activity to Compose** - uses `mutableStateOf` to ensure recomposition when the URI arrives from `onCreate` or `onNewIntent`.
+
 ## [1.0.8] - 2026-05-23
 
 ### Fixed
